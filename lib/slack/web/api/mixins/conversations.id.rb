@@ -6,7 +6,6 @@ module Slack
     module Api
       module Mixins
         module Conversations
-          include Ids
           #
           # This method returns a channel ID given a channel name.
           #
@@ -16,9 +15,17 @@ module Slack
             name = options[:channel]
             throw ArgumentError.new('Required arguments :channel missing') if name.nil?
 
-            id_for(:channel, name, '#', :channels, 'channel_not_found') do
-              conversations_list
+            return { 'ok' => true, 'channel' => { 'id' => name } } unless name[0] == '#'
+
+            conversations_list do |page|
+              page.channels.each do |channel|
+                if channel.name == name[1..-1]
+                  return Slack::Messages::Message.new('ok' => true, 'channel' => { 'id' => channel.id })
+                end
+              end
             end
+
+            raise Slack::Web::Api::Errors::SlackError, 'channel_not_found'
           end
         end
       end
